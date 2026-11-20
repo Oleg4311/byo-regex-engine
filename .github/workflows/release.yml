@@ -11,7 +11,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Версия в Cargo.toml должна совпадать с тегом
         run: test "v$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" = "$GITHUB_REF_NAME"
       - run: cargo test --all-targets
@@ -28,7 +28,7 @@ jobs:
           - { os: windows-latest, target: x86_64-pc-windows-msvc, name: windows-amd64, ext: ".exe" }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --bin bre --target ${{ matrix.target }}
       - name: Упаковка
@@ -39,7 +39,7 @@ jobs:
           cp "target/${{ matrix.target }}/release/bre${{ matrix.ext }}" "README.md" "LICENSE" "dist/$name/"
           if [ "${{ matrix.name }}" = windows-amd64 ]; then (cd dist && 7z a -tzip "$name.zip" "$name" >/dev/null); else tar -C dist -czf "dist/$name.tar.gz" "$name"; fi
           ls -la dist
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bre-${{ matrix.name }}
           path: |
