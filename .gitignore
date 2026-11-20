@@ -1,0 +1,8 @@
+target/
+site/
+dist/
+node_modules/
+test-results/
+playwright-report/
+*.log
+Cargo.lock.bak

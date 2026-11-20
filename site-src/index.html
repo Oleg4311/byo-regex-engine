@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>byo-regex-engine</title>
+<meta name="description" content="Движок регулярных выражений с нуля на Rust, скомпилированный в WebAssembly: байткод, Pike VM за линейное время и классический откат. Покажем, как (a+)+b убивает откат, но не Pike.">
+<meta property="og:title" content="byo-regex-engine: регулярные выражения с нуля">
+<meta property="og:description" content="Rust + WebAssembly: байткод, Pike VM и катастрофический откат на одном графике.">
+<meta property="og:type" content="website">
+<style>
+:root{--bg:#f6f6f2;--card:#fff;--ink:#1c1c1a;--mute:#585750;--line:#d8d6cc;--acc:#0b5cad;--code:#eeece5;
+--m0:#ffe08a;--m1:#a8dcff;--bad:#9c1c14;--bad-bg:#fde8e6;--ok:#14602f;--c-pike:#0b5cad;--c-bt:#b3261e;--c-memo:#2e7d32}
+@media (prefers-color-scheme:dark){:root{--bg:#151513;--card:#201f1c;--ink:#eeece5;--mute:#aeaba0;--line:#3a3934;--acc:#7db3f0;--code:#2b2a26;
+--m0:#6b5410;--m1:#1f4f73;--bad:#ffb4ab;--bad-bg:#4a1f1b;--ok:#8fdba9;--c-pike:#7db3f0;--c-bt:#ff9a92;--c-memo:#8fdba9}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header,main,footer{max-width:1000px;margin:0 auto;padding:0 16px}
+header{padding-top:28px}
+h1{margin:0 0 4px;font-size:1.8rem}
+.lead{color:var(--mute);margin:0 0 16px;max-width:70ch}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+h2{margin:0 0 8px;font-size:1.15rem}
+label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input.mono,textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.95rem}
+textarea{height:110px;resize:vertical}
+button{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);color:#fff;border-color:var(--acc)}
+@media (prefers-color-scheme:dark){button.primary{color:#0b1a2b}}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+@media (max-width:640px){.row{grid-template-columns:1fr}}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#error{margin:10px 0;padding:10px 12px;border-radius:8px;background:var(--bad-bg);color:var(--bad);font-weight:600}
+#error[hidden]{display:none}
+.hl{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--code);border-radius:8px;padding:10px 12px;font:.95rem/1.6 ui-monospace,Consolas,monospace;min-height:3em}
+mark{border-radius:3px;color:inherit;padding:0 1px}
+mark.m0{background:var(--m0)}mark.m1{background:var(--m1);outline:1px dashed var(--mute)}
+.stats{color:var(--mute);margin:8px 0}
+ul.matches{margin:6px 0;padding-left:18px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code);border-radius:8px;padding:10px 12px;overflow-x:auto;font-size:.85rem;margin:6px 0}
+details>summary{cursor:pointer;color:var(--acc)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:5px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--code)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+svg{width:100%;height:auto;max-width:720px;display:block}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0;font-size:.9rem}
+.legend span::before{content:"";display:inline-block;width:18px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle}
+.l-pike{color:var(--c-pike)}.l-bt{color:var(--c-bt)}.l-memo{color:var(--c-memo)}
+.l-pike::before{border-top-style:solid}.l-bt::before{border-top-style:dashed}.l-memo::before{border-top-style:dotted}
+a{color:var(--acc)}
+footer{padding:8px 16px 32px;color:var(--mute);font-size:.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>byo-regex-engine</h1>
+  <p class="lead">Движок регулярных выражений, написанный с нуля на Rust и скомпилированный в WebAssembly (80 КБ). Всё считается в вашем браузере. <a href="https://github.com/Oleg4311/byo-regex-engine">Код и CLI на GitHub</a>.</p>
+</header>
+<main>
+  <section aria-labelledby="h-try">
+    <h2 id="h-try">Попробовать</h2>
+    <div class="bar" role="group" aria-label="Примеры">
+      <button type="button" data-ex="date">Дата</button>
+      <button type="button" data-ex="lazy">Жадность и лень</button>
+      <button type="button" data-ex="alt">Приоритет ветвей</button>
+      <button type="button" data-ex="unicode">Юникод</button>
+    </div>
+    <div class="row">
+      <div><label for="pat">Шаблон</label><input id="pat" type="text" class="mono" value="(?P&lt;year&gt;\d{4})-(\d{2})" spellcheck="false" autocomplete="off"></div>
+      <div><label for="engine">Движок</label>
+        <select id="engine"><option value="0">Pike VM (линейный)</option><option value="1">Откат (классический)</option><option value="2">Откат с запоминанием</option></select></div>
+      <div><label for="steps">Предел шагов отката</label><input id="steps" type="number" min="1000" max="100000000" value="3000000"></div>
+    </div>
+    <label for="hay">Текст</label>
+    <textarea id="hay" spellcheck="false">Релиз 2026-11-20, а перенесли с 2026-10-31.</textarea>
+    <div id="error" role="alert" hidden></div>
+    <h3 style="margin:14px 0 4px;font-size:1rem">Совпадения</h3>
+    <div id="hl" class="hl" aria-live="polite"></div>
+    <p id="stats" class="stats"></p>
+    <ul id="matches" class="matches"></ul>
+    <details><summary>Байткод программы</summary><pre id="prog" tabindex="0" role="region" aria-label="Листинг байткода"></pre></details>
+  </section>
+
+  <section aria-labelledby="h-boom">
+    <h2 id="h-boom">Катастрофический откат: <code>(a+)+b</code></h2>
+    <p class="lead" style="margin-bottom:8px">Текст — <code>n</code> букв «a» и «c» в конце: совпадения нет, но откат перебирает все способы разбить «aaaa…» на группы, и работа растёт как 2ⁿ. Pike VM держит все пути одновременно и делает порядка n шагов.</p>
+    <div class="bar">
+      <label for="n" style="margin:0;align-self:center">n =</label>
+      <input id="n" type="number" min="4" max="40" value="22" style="width:6em">
+      <button type="button" id="boom" class="primary">Запустить три движка</button>
+      <button type="button" id="chart">Построить график</button>
+    </div>
+    <div class="scroll"><table id="boom-table" aria-live="polite"><caption class="stats" style="text-align:left">Нажмите «Запустить».</caption><thead><tr><th scope="col">Движок</th><th scope="col">Шагов</th><th scope="col">Итог</th></tr></thead><tbody></tbody></table></div>
+    <div id="chart-box" hidden>
+      <div class="legend" aria-hidden="true"><span class="l-pike">Pike VM</span><span class="l-bt">Откат (упирается в предел)</span><span class="l-memo">Откат с запоминанием</span></div>
+      <svg id="svg" viewBox="0 0 720 340" role="img" aria-labelledby="svg-t svg-d"><title id="svg-t">Число шагов от длины текста</title><desc id="svg-d">Логарифмическая шкала. У классического отката число шагов растёт экспоненциально до предела, у Pike VM и отката с запоминанием — почти линейно.</desc></svg>
+      <details><summary>Данные графика в таблице</summary><div class="scroll"><table id="chart-table"><thead><tr><th scope="col">n</th><th scope="col">Pike VM</th><th scope="col">Откат</th><th scope="col">Откат с запоминанием</th></tr></thead><tbody></tbody></table></div></details>
+    </div>
+  </section>
+</main>
+<footer>Сделано с помощью Claude. Лицензия MIT.</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>
