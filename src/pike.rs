@@ -103,7 +103,7 @@ impl Vm<'_> {
                 }
                 Inst::Char(_) | Inst::Class(_) | Inst::Match => list.threads.push(Thread {
                     pc,
-                    caps: caps.into(),
+                    caps: caps.to_vec().into_boxed_slice(),
                 }),
             }
         }
