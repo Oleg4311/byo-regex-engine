@@ -217,4 +217,3 @@ $('chart').addEventListener('click', () => {
 });
 
 render();
-$('boom').click();
