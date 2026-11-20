@@ -9,7 +9,15 @@ use std::time::Instant;
 fn make_log(lines: usize) -> String {
     let mut s = String::new();
     for i in 0..lines {
-        s.push_str(&format!("2026-11-{:02} 12:{:02}:{:02} user{}@example.com GET /api/v1/items/{} 200 {}ms\n", 1 + i % 28, i % 60, (i * 7) % 60, i % 97, i, i % 900));
+        s.push_str(&format!(
+            "2026-11-{:02} 12:{:02}:{:02} user{}@example.com GET /api/v1/items/{} 200 {}ms\n",
+            1 + i % 28,
+            i % 60,
+            (i * 7) % 60,
+            i % 97,
+            i,
+            i % 900
+        ));
     }
     s
 }
@@ -36,16 +44,33 @@ fn main() {
         ("нет совпадений", r"(foo|bar)+baz"),
         ("(a|aa)+b на aaaa…", r"(a|aa)+b"),
     ];
-    println!("Текст: {:.2} МБ ({} строк журнала)\n", mb, text.lines().count());
-    println!("{:<22} {:>14} {:>14} {:>10}", "шаблон", "byo-regex МБ/с", "regex МБ/с", "во сколько раз");
+    println!(
+        "Текст: {:.2} МБ ({} строк журнала)\n",
+        mb,
+        text.lines().count()
+    );
+    println!(
+        "{:<22} {:>14} {:>14} {:>10}",
+        "шаблон", "byo-regex МБ/с", "regex МБ/с", "во сколько раз"
+    );
     for (name, pat) in cases {
-        let hay = if *name == "(a|aa)+b на aaaa…" { "a".repeat(200_000) } else { text.clone() };
+        let hay = if *name == "(a|aa)+b на aaaa…" {
+            "a".repeat(200_000)
+        } else {
+            text.clone()
+        };
         let mb = hay.len() as f64 / 1e6;
         let ours = byo_regex::Regex::new(pat).unwrap();
         let theirs = regex::Regex::new(pat).unwrap();
         let (t1, n1) = time(|| ours.find_iter(&hay).count());
         let (t2, n2) = time(|| theirs.find_iter(&hay).count());
         assert_eq!(n1, n2, "число совпадений должно совпасть: {pat}");
-        println!("{:<22} {:>14.1} {:>14.1} {:>9.0}×", name, mb / t1, mb / t2, t1 / t2);
+        println!(
+            "{:<22} {:>14.1} {:>14.1} {:>9.0}×",
+            name,
+            mb / t1,
+            mb / t2,
+            t1 / t2
+        );
     }
 }
